@@ -15,8 +15,9 @@ def cnn_model_fn(features, labels, mode):
     learning_rate = 0.001
     """Model function for CNN."""
     # Input layer
-    input_layer = tf.reshape(features["x"], [-1, 98, 98, 3])
-
+    input_layer = features["x"]  # tf.reshape(features["x"], [-1, 98, 98, 3])
+    print(input_layer.shape)
+    
     # Convolutional Layer #1
     conv1 = tf.layers.conv2d(
         inputs=input_layer,
@@ -87,8 +88,11 @@ def parse_function(filename, label):
     image = tf.cast(image_decoded, tf.float32)
     return image, label
 
+def open_and_
+
 def train_input_fn(dataset_train):
-	return dataset.make_one_shot_iterator().get_next()
+	return dataset_train.make_one_shot_iterator().get_next()
+
 
 # Load training and eval data
 def main(unused_argv):
