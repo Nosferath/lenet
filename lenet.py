@@ -5,8 +5,10 @@ from __future__ import print_function
 # Imports
 import os
 import random
+import cv2
 import numpy as np
 import tensorflow as tf
+import sklearn.model_selection as sk
 
 tf.logging.set_verbosity(tf.logging.INFO)  # Level of info shown on output
 
@@ -15,8 +17,7 @@ def cnn_model_fn(features, labels, mode):
     learning_rate = 0.001
     """Model function for CNN."""
     # Input layer
-    input_layer = features["x"]  # tf.reshape(features["x"], [-1, 98, 98, 3])
-    print(input_layer.shape)
+    input_layer = tf.reshape(features["x"], [-1, 98, 98, 3])
     
     # Convolutional Layer #1
     conv1 = tf.layers.conv2d(
@@ -37,7 +38,7 @@ def cnn_model_fn(features, labels, mode):
         kernel_size=[5, 5],
         padding="same",
         activation=tf.nn.relu)
-    pool2 = tf.layer.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2, padding="same")
+    pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2, padding="same")
     # Output shape: [-1, 25, 25, 50]
 
     # Dense Layer
@@ -88,54 +89,96 @@ def parse_function(filename, label):
     image = tf.cast(image_decoded, tf.float32)
     return image, label
 
-def open_and_
-
-def train_input_fn(dataset_train):
-	return dataset_train.make_one_shot_iterator().get_next()
+def input_fn(images, labels, batch_size):
+    dict_images = {'x': images}
+    dataset = tf.data.Dataset.from_tensor_slices((dict(images), labels))
+    return dataset.shuffle(1000).repeat().batch(batch_size)
 
 
 # Load training and eval data
 def main(unused_argv):
-	batch_size = 100
-	image_dir = "/home/ares/claudio/imagenes/final_data/original/"
-	filenames_p = os.listdir(image_dir + 'p/')
-	filenames_n = os.listdir(image_dir + 'n/')
-	filenames = []
-	labels = []
-	for filename in filenames_p:
-		filenames.append(image_dir + 'p/' + filename)
-	for filename in filenames_n[0:len(filenames_p)]:
-		filenames.append(image_dir + 'n/' + filename)
-	random.seed(42)    
-	random.shuffle(filenames)
-	for filename in filenames:
-		if filename.split('/')[-2] == 'p':
-		    labels.append(1)
-		elif filename.split('/')[-2] == 'n':
-		    labels.append(0)
-	filenames = tf.constant(filenames)
-	labels = tf.constant(labels)
-	total = filenames.shape[0].value
-	filenames_train = filenames[:int(total*0.7)]
-	labels_train = labels[:int(total*0.7)]
-	filenames_eval = filenames[int(total*0.7):]
-	labels_eval = labels[int(total*0.7):]
-	dataset_train = tf.data.Dataset.from_tensor_slices((filenames_train, labels_train))
-	dataset_train = dataset_train.map(parse_function)
-	dataset_train = dataset_train.repeat().batch(batch_size)
-	dataset_eval = tf.data.Dataset.from_tensor_slices((filenames_eval, labels_eval))
-	dataset_eval = dataset_eval.map(parse_function)
-	dataset_eval = dataset_eval.repeat().batch(batch_size)
+    batch_size = 100
+    #image_dir = "/home/ares/claudio/imagenes/final_data/original/"
+    image_dir = "/home/claudio/segmentacion/imagenes/110_0342/final_data/original/"
+    filenames_p = os.listdir(image_dir + 'p/')
+    filenames_n = os.listdir(image_dir + 'n/')
+    images = []
+    labels = []
+    for filename in filenames_p:
+        images.append(cv2.imread(image_dir + 'p/' + filename))
+        labels.append(1)
+    for filename in filenames_n[0:len(filenames_p)]:
+        images.append(cv2.imread(image_dir + 'n/' + filename))
+        labels.append(0)
+    # Converting list([98,98,3]) to array(n, 98, 98, 3)
+    images = np.float32(np.stack(images))
+    labels = np.int32(np.array(labels))
+    images_train, images_eval, labels_train, labels_eval = sk.train_test_split(
+        images, labels, test_size=0.3, random_state=42)
     # Create the Estimator
-	crack_classifier = tf.estimator.Estimator(
-		model_fn=cnn_model_fn, model_dir="/home/ares/claudio/crack_convnet_model")
-	# Set up logging for predictions
-	tensors_to_log = {"probabilities": "softmax_tensor"}
-	logging_hook = tf.train.LoggingTensorHook(
-    	tensors=tensors_to_log, every_n_iter=50)
-	# Train the model
-	crack_classifier.train(input_fn=lambda: train_input_fn(dataset_train),
-		steps=20000, hooks=[logging_hook])
-
+    crack_classifier = tf.estimator.Estimator(
+        model_fn=cnn_model_fn, model_dir="/home/claudio/segmentacion/crack_convnet_model") #model_fn=cnn_model_fn, model_dir="/home/ares/claudio/crack_convnet_model")
+    # Set up logging for predictions
+    tensors_to_log = {"probabilities": "softmax_tensor"}
+    logging_hook = tf.train.LoggingTensorHook(
+        tensors=tensors_to_log, every_n_iter=50)
+    # Train the model 
+    train_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={"x": images_train},
+        y=labels_train,
+        batch_size=batch_size,
+        num_epochs=50,
+        shuffle=True)
+    crack_classifier.train(
+        input_fn=lambda: input_fn(images_train, labels_train, batch_size),
+        steps=20000,
+        hooks=[logging_hook])
+    # Evaluate the model and print results
+    eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={"x": images_eval},
+        y=labels_eval,
+        num_epochs=1,
+        shuffle=False)
+    eval_results = crack_classifier.evaluate(input_fn=eval_input_fn)
+    print(eval_results)
+    ####
+    """
+    filenames = []
+    labels = []
+    for filename in filenames_p:
+        filenames.append(image_dir + 'p/' + filename)
+    for filename in filenames_n[0:len(filenames_p)]:
+        filenames.append(image_dir + 'n/' + filename)
+    random.seed(42)    
+    random.shuffle(filenames)
+    for filename in filenames:
+        if filename.split('/')[-2] == 'p':
+            labels.append(1)
+        elif filename.split('/')[-2] == 'n':
+            labels.append(0)
+    filenames = tf.constant(filenames)
+    labels = tf.constant(labels)
+    total = filenames.shape[0].value
+    filenames_train = filenames[:int(total*0.7)]
+    labels_train = labels[:int(total*0.7)]
+    filenames_eval = filenames[int(total*0.7):]
+    labels_eval = labels[int(total*0.7):]
+    dataset_train = tf.data.Dataset.from_tensor_slices((filenames_train, labels_train))
+    dataset_train = dataset_train.map(parse_function)
+    dataset_train = dataset_train.repeat().batch(batch_size)
+    dataset_eval = tf.data.Dataset.from_tensor_slices((filenames_eval, labels_eval))
+    dataset_eval = dataset_eval.map(parse_function)
+    dataset_eval = dataset_eval.repeat().batch(batch_size)
+    # Create the Estimator
+    crack_classifier = tf.estimator.Estimator(
+        model_fn=cnn_model_fn, model_dir="/home/ares/claudio/crack_convnet_model")
+    # Set up logging for predictions
+    tensors_to_log = {"probabilities": "softmax_tensor"}
+    logging_hook = tf.train.LoggingTensorHook(
+	    tensors=tensors_to_log, every_n_iter=50)
+    # Train the model
+    crack_classifier.train(input_fn=lambda: train_input_fn(dataset_train),
+        steps=20000, hooks=[logging_hook])
+    """
 if __name__ == "__main__":
     tf.app.run()
