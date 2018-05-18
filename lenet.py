@@ -7,8 +7,8 @@ import os
 import random
 import cv2
 import numpy as np
-import tensorflow as tf
 import sklearn.model_selection as sk
+import tensorflow as tf
 
 tf.logging.set_verbosity(tf.logging.INFO)  # Level of info shown on output
 
@@ -91,15 +91,15 @@ def parse_function(filename, label):
 
 def input_fn(images, labels, batch_size):
     dict_images = {'x': images}
-    dataset = tf.data.Dataset.from_tensor_slices((dict(images), labels))
+    dataset = tf.data.Dataset.from_tensor_slices((dict(dict_images), labels))
     return dataset.shuffle(1000).repeat().batch(batch_size)
 
 
 # Load training and eval data
 def main(unused_argv):
-    batch_size = 100
-    #image_dir = "/home/ares/claudio/imagenes/final_data/original/"
-    image_dir = "/home/claudio/segmentacion/imagenes/110_0342/final_data/original/"
+    batch_size = 5
+    image_dir = "/home/ares/claudio/imagenes/final_data/original/"
+    #image_dir = "/home/claudio/segmentacion/imagenes/110_0342/final_data/original/"
     filenames_p = os.listdir(image_dir + 'p/')
     filenames_n = os.listdir(image_dir + 'n/')
     images = []
@@ -117,7 +117,8 @@ def main(unused_argv):
         images, labels, test_size=0.3, random_state=42)
     # Create the Estimator
     crack_classifier = tf.estimator.Estimator(
-        model_fn=cnn_model_fn, model_dir="/home/claudio/segmentacion/crack_convnet_model") #model_fn=cnn_model_fn, model_dir="/home/ares/claudio/crack_convnet_model")
+        #model_fn=cnn_model_fn, model_dir="/home/claudio/segmentacion/crack_convnet_model")
+        model_fn=cnn_model_fn, model_dir="/home/ares/claudio/crack_convnet_model")
     # Set up logging for predictions
     tensors_to_log = {"probabilities": "softmax_tensor"}
     logging_hook = tf.train.LoggingTensorHook(
