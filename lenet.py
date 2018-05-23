@@ -17,7 +17,7 @@ def cnn_model_fn(features, labels, mode):
     learning_rate = 0.001
     """Model function for CNN."""
     # Input layer
-    input_layer = tf.reshape(features["x"], [-1, 98, 98, 3])
+    input_layer = tf.reshape(features["x"], [-1, 96, 96, 3])
     
     # Convolutional Layer #1
     conv1 = tf.layers.conv2d(
@@ -29,7 +29,7 @@ def cnn_model_fn(features, labels, mode):
 
     # Pooling Layer #1
     pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
-    # Output shape: [-1, 49, 49, 20]
+    # Output shape: [-1, 48, 48, 20]
 
     # Convolutional Layer #2 and Pooling Layer #2
     conv2 = tf.layers.conv2d(
@@ -39,10 +39,10 @@ def cnn_model_fn(features, labels, mode):
         padding="same",
         activation=tf.nn.relu)
     pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2, padding="same")
-    # Output shape: [-1, 25, 25, 50]
+    # Output shape: [-1, 24, 24, 50]
 
     # Dense Layer
-    pool2_flat = tf.reshape(pool2, [-1, 25*25*50])
+    pool2_flat = tf.reshape(pool2, [-1, 24*24*50])
     dense = tf.layers.dense(inputs=pool2_flat, units=500, activation=tf.nn.relu)
     dropout = tf.layers.dropout(
         inputs=dense, rate=dropout_rate, training=mode == tf.estimator.ModeKeys.TRAIN)
@@ -98,7 +98,8 @@ def input_fn(images, labels, batch_size):
 # Load training and eval data
 def main(unused_argv):
     batch_size = 5
-    image_dir = "/home/ares/claudio/imagenes/final_data/original/"
+    image_dir = "/home/srmilab/Claudio/RefineNet/refinenet-image-segmentation/images/110_0342/final_data/original/"
+    #image_dir = "/home/ares/claudio/imagenes/final_data/original/"
     #image_dir = "/home/claudio/segmentacion/imagenes/110_0342/final_data/original/"
     filenames_p = os.listdir(image_dir + 'p/')
     filenames_n = os.listdir(image_dir + 'n/')
@@ -118,7 +119,8 @@ def main(unused_argv):
     # Create the Estimator
     crack_classifier = tf.estimator.Estimator(
         #model_fn=cnn_model_fn, model_dir="/home/claudio/segmentacion/crack_convnet_model")
-        model_fn=cnn_model_fn, model_dir="/home/ares/claudio/crack_convnet_model")
+        #model_fn=cnn_model_fn, model_dir="/home/ares/claudio/crack_convnet_model")
+        model_fn=cnn_model_fn, model_dir="/home/srmilab/Claudio/crack_convnet_model")
     # Set up logging for predictions
     tensors_to_log = {"probabilities": "softmax_tensor"}
     logging_hook = tf.train.LoggingTensorHook(
@@ -142,44 +144,5 @@ def main(unused_argv):
         shuffle=False)
     eval_results = crack_classifier.evaluate(input_fn=eval_input_fn)
     print(eval_results)
-    ####
-    """
-    filenames = []
-    labels = []
-    for filename in filenames_p:
-        filenames.append(image_dir + 'p/' + filename)
-    for filename in filenames_n[0:len(filenames_p)]:
-        filenames.append(image_dir + 'n/' + filename)
-    random.seed(42)    
-    random.shuffle(filenames)
-    for filename in filenames:
-        if filename.split('/')[-2] == 'p':
-            labels.append(1)
-        elif filename.split('/')[-2] == 'n':
-            labels.append(0)
-    filenames = tf.constant(filenames)
-    labels = tf.constant(labels)
-    total = filenames.shape[0].value
-    filenames_train = filenames[:int(total*0.7)]
-    labels_train = labels[:int(total*0.7)]
-    filenames_eval = filenames[int(total*0.7):]
-    labels_eval = labels[int(total*0.7):]
-    dataset_train = tf.data.Dataset.from_tensor_slices((filenames_train, labels_train))
-    dataset_train = dataset_train.map(parse_function)
-    dataset_train = dataset_train.repeat().batch(batch_size)
-    dataset_eval = tf.data.Dataset.from_tensor_slices((filenames_eval, labels_eval))
-    dataset_eval = dataset_eval.map(parse_function)
-    dataset_eval = dataset_eval.repeat().batch(batch_size)
-    # Create the Estimator
-    crack_classifier = tf.estimator.Estimator(
-        model_fn=cnn_model_fn, model_dir="/home/ares/claudio/crack_convnet_model")
-    # Set up logging for predictions
-    tensors_to_log = {"probabilities": "softmax_tensor"}
-    logging_hook = tf.train.LoggingTensorHook(
-	    tensors=tensors_to_log, every_n_iter=50)
-    # Train the model
-    crack_classifier.train(input_fn=lambda: train_input_fn(dataset_train),
-        steps=20000, hooks=[logging_hook])
-    """
 if __name__ == "__main__":
     tf.app.run()
