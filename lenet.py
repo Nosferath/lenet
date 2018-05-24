@@ -41,14 +41,39 @@ def cnn_model_fn(features, labels, mode):
     pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2, padding="same")
     # Output shape: [-1, 24, 24, 50]
 
-    # Dense Layer
-    pool2_flat = tf.reshape(pool2, [-1, 24*24*50])
-    dense = tf.layers.dense(inputs=pool2_flat, units=500, activation=tf.nn.relu)
-    dropout = tf.layers.dropout(
-        inputs=dense, rate=dropout_rate, training=mode == tf.estimator.ModeKeys.TRAIN)
+    # Convolutional Layer #3 and Pooling Layer #3
+    conv3 = tf.layers.conv2d(
+        inputs=pool2,
+        filters=100,
+        kernel_size=[5, 5],
+        padding="same",
+        activation=tf.nn.relu)
+    pool3 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2, padding="same")
+    # Output shape: [-1, 12, 12, 100]
+
+    # Dense Layer #1
+    pool2_flat = tf.reshape(pool2, [-1, 12*12*100])
+    dense1 = tf.layers.dense(inputs=pool2_flat, units=2000, activation=tf.nn.relu)
+    dropout1 = tf.layers.dropout(
+        inputs=dense1, rate=dropout_rate, training=mode == tf.estimator.ModeKeys.TRAIN)
+
+    # Dense Layer #2
+    dense2 = tf.layers.dense(inputs=dropout1, units=1000, activation=tf.nn.relu)
+    dropout2 = tf.layers.dropout(
+        inputs=dense2, rate=dropout_rate, training=mode == tf.estimator.ModeKeys.TRAIN)
+
+    # Dense Layer #3
+    dense3 = tf.layers.dense(inputs=dropout2, units=500, activation=tf.nn.relu)
+    dropout3 = tf.layers.dropout(
+        inputs=dense3, rate=dropout_rate, training=mode == tf.estimator.ModeKeys.TRAIN)
+
+    # Dense Layer #4
+    dense4 = tf.layers.dense(inputs=dropout3, units=100, activation=tf.nn.relu)
+    dropout4 = tf.layers.dropout(
+        inputs=dense4, rate=dropout_rate, training=mode == tf.estimator.ModeKeys.TRAIN)
 
     # Logits Layer
-    logits = tf.layers.dense(inputs=dropout, units=2)
+    logits = tf.layers.dense(inputs=dropout4, units=2)
 
     predictions = {
         # Generate predictions (for PREDICT and EVAL mode)
@@ -62,10 +87,10 @@ def cnn_model_fn(features, labels, mode):
         return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
 
     # Calculate Loss (for both TRAIN and EVAL modes)
-    loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
-    # onehot_labels = tf.one_hot(indices=tf.cast(labels, tf.int32), depth=10)
-    # loss = tf.losses.softmax_cross_entropy(
-    #     onehot_labels=onehot_labels, logits=logits)
+    # loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
+    onehot_labels = tf.one_hot(indices=tf.cast(labels, tf.int32), depth=2)
+    loss = tf.losses.softmax_cross_entropy(
+        onehot_labels=onehot_labels, logits=logits)
 
 
     # Configure the Training Op (for TRAIN mode)
