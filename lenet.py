@@ -3,12 +3,13 @@ from __future__ import division
 from __future__ import print_function
 
 # Imports
-import os
-import random
-import cv2
-import numpy as np
-import sklearn.model_selection as sk
+#import os
+#import random
+#import cv2
+#import numpy as np
+#import sklearn.model_selection as sk
 import tensorflow as tf
+from load_data import load_data
 
 tf.logging.set_verbosity(tf.logging.INFO)  # Level of info shown on output
 
@@ -102,6 +103,7 @@ def main(unused_argv):
     #image_dir = "/home/ares/claudio/imagenes/final_data/original/"
     #image_dir = "/home/claudio/segmentacion/imagenes/110_0342/final_data/original/"
     image_dir = "/home/inti/Desktop/Claudio/final_data/original/"
+    """
     filenames_p = os.listdir(image_dir + 'p/')
     filenames_n = os.listdir(image_dir + 'n/')
     images = []
@@ -122,7 +124,9 @@ def main(unused_argv):
     images = np.float32(np.stack(images))
     labels = np.int32(np.array(labels))
     images_train, images_eval, labels_train, labels_eval = sk.train_test_split(
-        images, labels, test_size=0.3, random_state=42)
+        images, labels, test_size=0.3, random_state=42)"""
+    images_train, images_eval, labels_train, labels_eval = load_data(
+            batch_size, image_dir)
     # Create the Estimator
     crack_classifier = tf.estimator.Estimator(
         #model_fn=cnn_model_fn, model_dir="/home/claudio/segmentacion/crack_convnet_model")
