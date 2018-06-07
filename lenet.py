@@ -98,9 +98,10 @@ def input_fn(images, labels, batch_size):
 # Load training and eval data
 def main(unused_argv):
     batch_size = 5
-    image_dir = "/home/srmilab/Claudio/RefineNet/refinenet-image-segmentation/images/110_0342/final_data/original/"
+    #image_dir = "/home/srmilab/Claudio/RefineNet/refinenet-image-segmentation/images/110_0342/final_data/original/"
     #image_dir = "/home/ares/claudio/imagenes/final_data/original/"
     #image_dir = "/home/claudio/segmentacion/imagenes/110_0342/final_data/original/"
+    image_dir = "/home/inti/Desktop/Claudio/final_data/original/"
     filenames_p = os.listdir(image_dir + 'p/')
     filenames_n = os.listdir(image_dir + 'n/')
     images = []
@@ -112,7 +113,7 @@ def main(unused_argv):
         images.append(cv2.imread(image_dir + 'n/' + filename))
         labels.append(0)
     # Shuffle images, as database.shuffle doesn't seem to work
-    indexes = range(len(images))
+    indexes = list(range(len(images)))
     random.shuffle(indexes)
     images = [images[i] for i in indexes]
     labels = [labels[i] for i in labels]
@@ -126,7 +127,8 @@ def main(unused_argv):
     crack_classifier = tf.estimator.Estimator(
         #model_fn=cnn_model_fn, model_dir="/home/claudio/segmentacion/crack_convnet_model")
         #model_fn=cnn_model_fn, model_dir="/home/ares/claudio/crack_convnet_model")
-        model_fn=cnn_model_fn, model_dir="/home/srmilab/Claudio/crack_convnet_model")
+        #model_fn=cnn_model_fn, model_dir="/home/srmilab/Claudio/crack_convnet_model")
+        model_fn=cnn_model_fn, model_dir="/home/inti/Desktop/Claudio/crack_convnet_model")
     # Set up logging for predictions
     tensors_to_log = {"probabilities": "softmax_tensor"}
     logging_hook = tf.train.LoggingTensorHook(
