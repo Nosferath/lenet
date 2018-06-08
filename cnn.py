@@ -14,28 +14,34 @@ import tensorflow as tf
 # Training Parameters
 learning_rate = 0.001
 num_steps = 200
-batch_size = 5  # 128
+batch_size = 32  # 128
 display_step = 10
 
 # Import crack_data
 image_dir = "/home/inti/Desktop/Claudio/final_data/original/"
 images_train, images_eval, labels_train, labels_eval = load_data(
-            batch_size, image_dir)
+            batch_size, image_dir, one_hot=True)
 dict_images_train = {'x': images_train}
 dataset_train = tf.data.Dataset.from_tensor_slices(
         (images_train, labels_train))
-dataset_train = dataset_train.shuffle(1000).repeat().batch(batch_size)
-iterator_train = dataset_train.make_one_shot_iterator()
-
+dataset_train = dataset_train.batch(batch_size)
+iterator_train = dataset_train.make_initializable_iterator()
 
 # Network Parameters
 num_input = 96*96*3 # MNIST data input (img shape: 28*28)
 num_classes = 2 # MNIST total classes (0-9 digits)
 dropout = 1 # Dropout, probability to keep units
 
+sess = tf.Session()
+
+_data = tf.placeholder(tf.float32, [None, 96, 96, 3])
+_labels = tf.placeholder(tf.float32, [None, num_classes])
+
+sess.run(iterator_train.initializer, feed_dict={_data: images_train,
+                                                _labels: labels_train})
+
 # tf Graph input
-X = tf.placeholder(tf.float32, [None, 96, 96, 3]) #num_input
-Y = tf.placeholder(tf.float32, [None, num_classes])
+X, Y = iterator_train.get_next()
 keep_prob = tf.placeholder(tf.float32) # dropout (keep probability)
 
 
@@ -118,31 +124,33 @@ accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
 # Initialize the variables (i.e. assign their default value)
 init = tf.global_variables_initializer()
-
+batch_x, batch_y = iterator_train.get_next()
 # Start training
-with tf.Session() as sess:
 
-    # Run the initializer
-    sess.run(init)
+# Run the initializer
+sess.run(init)
 
-    for step in range(1, num_steps+1):
-        batch_x, batch_y = iterator_train.get_next()  #mnist.train.next_batch(batch_size)
-        batch_x, batch_y = batch_x.eval(session=sess), batch_y.eval(session=sess)
-        # Run optimization op (backprop)
-        sess.run(train_op, feed_dict={X: batch_x, Y: batch_y, keep_prob: 0.8})
-        if step % display_step == 0 or step == 1:
-            # Calculate batch loss and accuracy
-            loss, acc = sess.run([loss_op, accuracy], feed_dict={X: batch_x,
-                                                                 Y: batch_y,
-                                                                 keep_prob: 1.0})
-            print("Step " + str(step) + ", Minibatch Loss= " + \
-                  "{:.4f}".format(loss) + ", Training Accuracy= " + \
-                  "{:.3f}".format(acc))
+for step in range(1, num_steps+1):  #mnist.train.next_batch(batch_size)
+    #batch_x, batch_y = batch_x.eval(session=sess), batch_y.eval(session=sess)
+    # Run optimization op (backprop)
+    try:
+        sess.run(train_op, feed_dict={keep_prob: 0.8})
+    except tf.errors.OutOfRangeError:
+        sess.run(iterator_train.initializer,
+                 feed_dict={_data: images_train,
+                            _labels: labels_train})
+        sess.run(train_op, feed_dict={keep_prob: 0.8})
+    if step % display_step == 0 or step == 1:
+        # Calculate batch loss and accuracy
+        loss, acc = sess.run([loss_op, accuracy], feed_dict={keep_prob: 1.0})
+        print("Step " + str(step) + ", Minibatch Loss= " + \
+              "{:.4f}".format(loss) + ", Training Accuracy= " + \
+              "{:.3f}".format(acc))
 
-    print("Optimization Finished!")
+print("Optimization Finished!")
 
-    # Calculate accuracy for 256 MNIST test images
-    print("Testing Accuracy:", \
-        sess.run(accuracy, feed_dict={X: images_eval[:256],  #mnist.test.images[:256],
-                                      Y: labels_eval[:256],  #mnist.test.labels[:256],
-                                      keep_prob: 1.0}))
+# Calculate accuracy for 256 MNIST test images
+print("Testing Accuracy:", \
+    sess.run(accuracy, feed_dict={X: images_eval[:256],  #mnist.test.images[:256],
+                                  Y: labels_eval[:256],  #mnist.test.labels[:256],
+                                  keep_prob: 1.0}))

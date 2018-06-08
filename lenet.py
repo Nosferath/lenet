@@ -132,7 +132,7 @@ def main(unused_argv):
         #model_fn=cnn_model_fn, model_dir="/home/claudio/segmentacion/crack_convnet_model")
         #model_fn=cnn_model_fn, model_dir="/home/ares/claudio/crack_convnet_model")
         #model_fn=cnn_model_fn, model_dir="/home/srmilab/Claudio/crack_convnet_model")
-        model_fn=cnn_model_fn, model_dir="/home/inti/Desktop/Claudio/crack_convnet_model")
+        model_fn=cnn_model_fn, model_dir="/home/inti/Desktop/Claudio/lenet_convnet_model")
     # Set up logging for predictions
     tensors_to_log = {"probabilities": "softmax_tensor"}
     logging_hook = tf.train.LoggingTensorHook(
