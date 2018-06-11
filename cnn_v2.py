@@ -26,7 +26,7 @@ images_train = np.reshape(images_train, [-1, 96*96*3])
 # Network Parameters
 n_input = 96*96*3 # MNIST data input (img shape: 28*28)
 n_classes = 2 # MNIST total classes (0-9 digits)
-dropout = 0 # Dropout, probability to keep units
+dropout = 0.8 # Dropout, probability to keep units
 
 sess = tf.Session()
 
@@ -89,15 +89,59 @@ def conv_net(x, n_classes, dropout, reuse, is_training):
 
     return out
 
+def cnn_model_fn(x, n_classes, dropout, reuse, is_training):
+    """Model function for CNN."""
+    # Input layer
+    x = tf.reshape(x, [-1, 96, 96, 3])
+    
+    # Convolutional Layer #1
+    conv1 = tf.layers.conv2d(x, 20, 5, activation=tf.nn.relu)
+
+    # Pooling Layer #1
+    pool1 = tf.layers.max_pooling2d(conv1, 2, 2)
+    # Output shape: [-1, 48, 48, 20]
+
+    # Convolutional Layer #2 and Pooling Layer #2
+    conv2 = tf.layers.conv2d(pool1, 50, 5, activation=tf.nn.relu)
+    
+    pool2 = tf.layers.max_pooling2d(conv2, 2, 2)
+    # Output shape: [-1, 24, 24, 50]
+
+    # Convolutional Layer #3 and Pooling Layer #3
+    conv3 = tf.layers.conv2d(pool2, 100, 5, activation=tf.nn.relu)
+    pool3 = tf.layers.max_pooling2d(conv3, 2, 2)
+    # Output shape: [-1, 12, 12, 100]
+
+    # Dense Layer #1
+    pool3_flat = tf.contrib.layers.flatten(pool3)
+    dense1 = tf.layers.dense(pool3_flat, 2000)
+    dropout1 = tf.layers.dropout(dense1, rate=dropout, training=is_training)
+
+    # Dense Layer #2
+    dense2 = tf.layers.dense(dropout1, 1000)
+    dropout2 = tf.layers.dropout(dense2, rate=dropout, training=is_training)
+
+    # Dense Layer #3
+    dense3 = tf.layers.dense(dropout2, 500)
+    dropout3 = tf.layers.dropout(dense3, rate=dropout, training=is_training)
+
+    # Dense Layer #4
+    dense4 = tf.layers.dense(dropout3, 100)
+    dropout4 = tf.layers.dropout(dense4, rate=dropout, training=is_training)
+    # Logits Layer
+    logits = tf.layers.dense(dropout4, n_classes)
+    out = tf.nn.softmax(logits) if not is_training else logits
+    return out
+
 
 # Because Dropout have different behavior at training and prediction time, we
 # need to create 2 distinct computation graphs that share the same weights.
 
 # Create a graph for training
-logits_train = conv_net(X, n_classes, dropout, reuse=tf.AUTO_REUSE, is_training=True)
+logits_train = cnn_model_fn(X, n_classes, dropout, reuse=tf.AUTO_REUSE, is_training=True)
 # Create another graph for testing that reuse the same weights, but has
 # different behavior for 'dropout' (not applied).
-logits_test = conv_net(X, n_classes, dropout, reuse=tf.AUTO_REUSE, is_training=False)
+logits_test = cnn_model_fn(X, n_classes, dropout, reuse=tf.AUTO_REUSE, is_training=False)
 
 # Define loss and optimizer (with train logits, for dropout to take effect)
 loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
