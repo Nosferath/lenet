@@ -3,7 +3,7 @@ from shutil import copy2
 import random
 
 image_dir = "/home/inti/Desktop/Claudio/final_data/"
-final_dir = "/home/inti/Desktop/Claudio/Semantic-Segmentation-Suite/crack_images/"
+final_dir = "/home/inti/Desktop/Claudio/Semantic-Segmentation-Suite/crack_images_v2/"
 filenames = os.listdir(image_dir + 'original/p/')
 
 indexes = list(range(len(filenames)))
